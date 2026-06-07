@@ -3,19 +3,24 @@ package com.BankAdvisor;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.ItemManager;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Singleton
 public class BankLayoutManager {
@@ -30,14 +35,20 @@ public class BankLayoutManager {
     private BankLayoutPreset activePreset = createDefaultPreset();
 
     @Inject
+    private Client client;
+
+    @Inject
+    private ClientThread clientThread;
+
+    @Inject
     private ItemManager itemManager;
 
     @Inject
     private ConfigManager configManager;
 
     private final Gson gson = new GsonBuilder()
-        .enableComplexMapKeySerialization()
-        .create();
+            .enableComplexMapKeySerialization()
+            .create();
 
     public BankLayoutPreset getActivePreset() {
         return activePreset;
@@ -96,11 +107,11 @@ public class BankLayoutManager {
 
     private BankLayoutPreset getBuiltInPresetCopy(String presetName) {
         return BankLayoutPreset.getBuiltInPresets()
-            .stream()
-            .filter(preset -> presetName.equals(preset.getName()))
-            .findFirst()
-            .map(BankLayoutPreset::copy)
-            .orElseGet(this::createDefaultPreset);
+                .stream()
+                .filter(preset -> presetName.equals(preset.getName()))
+                .findFirst()
+                .map(BankLayoutPreset::copy)
+                .orElseGet(this::createDefaultPreset);
     }
 
     private void ensureUncategorizedTabExists(BankLayoutPreset preset) {
@@ -113,15 +124,15 @@ public class BankLayoutManager {
         }
 
         boolean uncategorizedExists = preset.getTabs()
-            .stream()
-            .anyMatch(BankLayoutTab::isUncategorized);
+                .stream()
+                .anyMatch(BankLayoutTab::isUncategorized);
 
         if (!uncategorizedExists) {
             int nextNumber = preset.getTabs()
-                .stream()
-                .mapToInt(BankLayoutTab::getNumber)
-                .max()
-                .orElse(0) + 1;
+                    .stream()
+                    .mapToInt(BankLayoutTab::getNumber)
+                    .max()
+                    .orElse(0) + 1;
 
             preset.getTabs().add(new BankLayoutTab(nextNumber, UNCATEGORIZED_TAB_NAME, Color.GRAY));
         }
@@ -168,10 +179,10 @@ public class BankLayoutManager {
         }
 
         return activePreset.getTabs()
-            .stream()
-            .filter(BankLayoutTab::isUncategorized)
-            .findFirst()
-            .orElseGet(() -> new BankLayoutTab(-1, UNCATEGORIZED_TAB_NAME, Color.GRAY));
+                .stream()
+                .filter(BankLayoutTab::isUncategorized)
+                .findFirst()
+                .orElseGet(() -> new BankLayoutTab(-1, UNCATEGORIZED_TAB_NAME, Color.GRAY));
     }
 
     public Optional<ItemComposition> getItemCompositionFromWidget(Widget widget) {
@@ -185,6 +196,72 @@ public class BankLayoutManager {
         }
 
         return Optional.ofNullable(itemManager.getItemComposition(itemId));
+    }
+
+    public void scanOpenBankAsync(Consumer<BankScanResult> onSuccess, Consumer<Throwable> onError) {
+        clientThread.invokeLater(() -> {
+            try {
+                BankScanResult result = scanOpenBankOnClientThread();
+                SwingUtilities.invokeLater(() -> onSuccess.accept(result));
+            } catch (Throwable throwable) {
+                SwingUtilities.invokeLater(() -> onError.accept(throwable));
+            }
+        });
+    }
+
+    private BankScanResult scanOpenBankOnClientThread() {
+        BankScanResult result = new BankScanResult();
+
+        Widget bankContainer = client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER);
+        if (bankContainer == null || bankContainer.isHidden()) {
+            return result;
+        }
+
+        Widget[] children = bankContainer.getDynamicChildren();
+        if (children == null || children.length == 0) {
+            children = bankContainer.getNestedChildren();
+        }
+
+        if (children == null) {
+            return result;
+        }
+
+        for (Widget itemWidget : children) {
+            if (itemWidget == null || itemWidget.isHidden() || itemWidget.getItemId() <= 0) {
+                continue;
+            }
+
+            Optional<ItemComposition> itemCompositionOptional = getItemCompositionFromWidget(itemWidget);
+            if (itemCompositionOptional.isEmpty()) {
+                continue;
+            }
+
+            ItemComposition itemComposition = itemCompositionOptional.get();
+            String itemName = itemComposition.getName();
+
+            result.incrementTotalItems();
+
+            BankLayoutTab tab = getTabForItem(itemComposition);
+            if (tab == null || tab.isUncategorized()) {
+                result.incrementUncategorizedItems();
+                result.incrementTab(UNCATEGORIZED_TAB_NAME, itemName);
+                result.addUncategorizedExample(itemName);
+                continue;
+            }
+
+            result.incrementMatchedItems();
+            result.incrementTab(tab.getNumber() + " " + tab.getName(), itemName);
+
+            BankLayoutSection section = tab.getSectionForItem(itemComposition);
+            if (section == null) {
+                result.incrementSection(tab.getNumber() + " " + tab.getName() + " / No Section", itemName);
+                result.addNoSectionExample(itemName);
+            } else {
+                result.incrementSection(tab.getNumber() + " " + tab.getName() + " / " + section.getName(), itemName);
+            }
+        }
+
+        return result;
     }
 
     public void addTab(BankLayoutTab newTab) {
@@ -201,10 +278,10 @@ public class BankLayoutManager {
         }
 
         int nextNumber = activePreset.getTabs()
-            .stream()
-            .mapToInt(BankLayoutTab::getNumber)
-            .max()
-            .orElse(0) + 1;
+                .stream()
+                .mapToInt(BankLayoutTab::getNumber)
+                .max()
+                .orElse(0) + 1;
 
         newTab.setNumber(nextNumber);
         activePreset.getTabs().add(newTab);

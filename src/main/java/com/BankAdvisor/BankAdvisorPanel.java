@@ -6,15 +6,12 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
-import javax.swing.JTextField;
-import javax.swing.JToggleButton;
+import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
@@ -23,10 +20,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
-import java.util.ArrayList;
-import java.util.List;
 
 public class BankAdvisorPanel extends PluginPanel {
     private static final Color TEAL = new Color(0, 212, 184);
@@ -42,6 +36,8 @@ public class BankAdvisorPanel extends PluginPanel {
 
     private JComboBox<String> presetSelector;
     private JPanel tabListPanel;
+    private JTextArea scanReportArea;
+    private JButton scanButton;
 
     public BankAdvisorPanel(BankLayoutManager layoutManager, Runnable onLayoutChanged) {
         super(false);
@@ -71,8 +67,8 @@ public class BankAdvisorPanel extends PluginPanel {
         JLabel title = new JLabel("Bank Advisor");
         title.setForeground(TEAL);
         title.setFont(new Font("SansSerif", Font.BOLD, 15));
-        title.setBorder(new EmptyBorder(2, 0, 8, 0));
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        title.setBorder(new EmptyBorder(2, 0, 8, 0));
         header.add(title);
 
         JLabel presetLabel = new JLabel("Layout preset");
@@ -101,14 +97,98 @@ public class BankAdvisorPanel extends PluginPanel {
         header.add(presetSelector);
         header.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        JSeparator sep = new JSeparator();
-        sep.setForeground(BORDER);
-        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        sep.setAlignmentX(Component.LEFT_ALIGNMENT);
-        header.add(sep);
+        scanButton = styledButton("Scan Open Bank", TEAL);
+        scanButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scanButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        scanButton.addActionListener(e -> scanOpenBank());
+        header.add(scanButton);
+        header.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        scanReportArea = new JTextArea();
+        scanReportArea.setEditable(false);
+        scanReportArea.setLineWrap(true);
+        scanReportArea.setWrapStyleWord(true);
+        scanReportArea.setBackground(BG_INPUT);
+        scanReportArea.setForeground(TEXT);
+        scanReportArea.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        scanReportArea.setBorder(new EmptyBorder(4, 4, 4, 4));
+        scanReportArea.setText("Open your bank and click Scan Open Bank.");
+        scanReportArea.setRows(8);
+
+        JScrollPane scanScroll = new JScrollPane(scanReportArea);
+        scanScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scanScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+        scanScroll.setPreferredSize(new Dimension(220, 120));
+        scanScroll.setBorder(BorderFactory.createLineBorder(BORDER));
+
+        header.add(scanScroll);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
 
         return header;
+    }
+
+    private void scanOpenBank() {
+        if (scanButton != null) {
+            scanButton.setText("Scanning...");
+            scanButton.setEnabled(false);
+        }
+
+        layoutManager.scanOpenBankAsync(
+                result -> {
+                    String report = result.toReportText();
+
+                    if (scanReportArea != null) {
+                        scanReportArea.setText(report);
+                        scanReportArea.setCaretPosition(0);
+                    }
+
+                    if (scanButton != null) {
+                        scanButton.setText("Scan Open Bank");
+                        scanButton.setEnabled(true);
+                    }
+
+                    showReportDialog("Bank Advisor Scan", report);
+                },
+                throwable -> {
+                    String errorReport = "Bank Advisor Scan failed.\n\n"
+                            + throwable.getClass().getSimpleName()
+                            + ": "
+                            + throwable.getMessage()
+                            + "\n\nCheck the console for the full error.";
+
+                    if (scanReportArea != null) {
+                        scanReportArea.setText(errorReport);
+                        scanReportArea.setCaretPosition(0);
+                    }
+
+                    if (scanButton != null) {
+                        scanButton.setText("Scan Open Bank");
+                        scanButton.setEnabled(true);
+                    }
+
+                    throwable.printStackTrace();
+                    showReportDialog("Bank Advisor Scan Failed", errorReport);
+                }
+        );
+    }
+
+    private void showReportDialog(String title, String text) {
+        JTextArea dialogText = new JTextArea(text);
+        dialogText.setEditable(false);
+        dialogText.setLineWrap(true);
+        dialogText.setWrapStyleWord(true);
+        dialogText.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        dialogText.setCaretPosition(0);
+
+        JScrollPane scrollPane = new JScrollPane(dialogText);
+        scrollPane.setPreferredSize(new Dimension(440, 360));
+
+        JOptionPane.showMessageDialog(
+                this,
+                scrollPane,
+                title,
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private void switchPreset() {
@@ -118,10 +198,10 @@ public class BankAdvisorPanel extends PluginPanel {
         }
 
         int confirm = JOptionPane.showConfirmDialog(
-            this,
-            "Switch to \"" + selected + "\"?\nYour current edits will be replaced.",
-            "Switch Preset",
-            JOptionPane.YES_NO_OPTION
+                this,
+                "Switch to \"" + selected + "\"?\nYour current edits will be replaced.",
+                "Switch Preset",
+                JOptionPane.YES_NO_OPTION
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
@@ -150,11 +230,6 @@ public class BankAdvisorPanel extends PluginPanel {
             }
         }
 
-        JButton addTabBtn = styledButton("+ Add Tab", TEAL);
-        addTabBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        addTabBtn.addActionListener(e -> addNewTab());
-        tabListPanel.add(addTabBtn);
-
         tabListPanel.revalidate();
         tabListPanel.repaint();
     }
@@ -164,193 +239,27 @@ public class BankAdvisorPanel extends PluginPanel {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(BG_CARD);
         card.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(0, 3, 0, 0, safeColor(tab.getColor())),
-            new EmptyBorder(6, 8, 6, 8)
+                new MatteBorder(0, 3, 0, 0, safeColor(tab.getColor())),
+                new EmptyBorder(6, 8, 6, 8)
         ));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
 
-        JPanel cardHeader = new JPanel(new BorderLayout());
-        cardHeader.setBackground(BG_CARD);
-        cardHeader.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JLabel title = new JLabel(tab.getNumber() + "  " + tab.getName());
+        title.setForeground(TEXT);
+        title.setFont(new Font("SansSerif", Font.BOLD, 12));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(title);
 
-        JLabel numBadge = new JLabel(" " + tab.getNumber() + " ");
-        numBadge.setForeground(BG);
-        numBadge.setBackground(safeColor(tab.getColor()));
-        numBadge.setOpaque(true);
-        numBadge.setFont(new Font("SansSerif", Font.BOLD, 11));
-        numBadge.setBorder(new EmptyBorder(1, 4, 1, 4));
+        JLabel keywordCount = new JLabel("Keywords: " + tab.getKeywords().size() + " | Sections: " + tab.getSections().size());
+        keywordCount.setForeground(TEXT_DIM);
+        keywordCount.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        keywordCount.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel nameLabel = new JLabel(tab.getName());
-        nameLabel.setForeground(TEXT);
-        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
-        nameLabel.setBorder(new EmptyBorder(0, 6, 0, 0));
-
-        JPanel leftSide = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        leftSide.setBackground(BG_CARD);
-        leftSide.add(numBadge);
-        leftSide.add(nameLabel);
-
-        JPanel rightSide = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-        rightSide.setBackground(BG_CARD);
-
-        JToggleButton setBtn = new JToggleButton("Done");
-        setBtn.setSelected(tab.isSet());
-        setBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
-        setBtn.setForeground(tab.isSet() ? TEAL : TEXT_DIM);
-        setBtn.setBackground(BG_INPUT);
-        setBtn.setBorder(new EmptyBorder(2, 6, 2, 6));
-        setBtn.setFocusPainted(false);
-        setBtn.addActionListener(e -> {
-            tab.setSet(setBtn.isSelected());
-            setBtn.setForeground(tab.isSet() ? TEAL : TEXT_DIM);
-            layoutManager.saveActivePreset();
-            onLayoutChanged.run();
-        });
-
-        JButton colorBtn = new JButton();
-        colorBtn.setBackground(safeColor(tab.getColor()));
-        colorBtn.setPreferredSize(new Dimension(16, 16));
-        colorBtn.setBorder(BorderFactory.createLineBorder(BORDER));
-        colorBtn.setFocusPainted(false);
-        colorBtn.setToolTipText("Change colour");
-        colorBtn.addActionListener(e -> {
-            Color chosen = JColorChooser.showDialog(this, "Choose tab colour", safeColor(tab.getColor()));
-            if (chosen != null) {
-                tab.setColor(chosen);
-                rebuildTabList();
-                layoutManager.saveActivePreset();
-                onLayoutChanged.run();
-            }
-        });
-
-        JButton deleteBtn = styledButton("\u2715", new Color(180, 60, 60));
-        deleteBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
-        deleteBtn.setPreferredSize(new Dimension(22, 22));
-        deleteBtn.setToolTipText("Delete tab");
-        deleteBtn.setEnabled(!tab.isUncategorized());
-        deleteBtn.addActionListener(e -> {
-            layoutManager.removeTab(tab);
-            rebuildTabList();
-            onLayoutChanged.run();
-        });
-
-        rightSide.add(setBtn);
-        rightSide.add(colorBtn);
-        rightSide.add(deleteBtn);
-
-        cardHeader.add(leftSide, BorderLayout.WEST);
-        cardHeader.add(rightSide, BorderLayout.EAST);
-        card.add(cardHeader);
-
-        JTextField nameField = new JTextField(tab.getName());
-        styleTextField(nameField);
-        nameField.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        nameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-
-        card.add(Box.createRigidArea(new Dimension(0, 6)));
-        card.add(dimLabel("Tab name:"));
-        card.add(nameField);
-
-        nameField.addActionListener(e -> {
-            tab.setName(nameField.getText().trim());
-            nameLabel.setText(tab.getName());
-            layoutManager.saveActivePreset();
-            onLayoutChanged.run();
-        });
-
-        card.add(Box.createRigidArea(new Dimension(0, 6)));
-        card.add(dimLabel("Keywords:"));
-
-        JPanel keywordsPanel = new JPanel();
-        keywordsPanel.setLayout(new BoxLayout(keywordsPanel, BoxLayout.Y_AXIS));
-        keywordsPanel.setBackground(BG_CARD);
-        keywordsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        for (String keyword : new ArrayList<>(tab.getKeywords())) {
-            keywordsPanel.add(buildKeywordRow(keyword, tab, keywordsPanel));
-        }
-
-        card.add(keywordsPanel);
         card.add(Box.createRigidArea(new Dimension(0, 4)));
-
-        JPanel addRow = new JPanel(new BorderLayout(4, 0));
-        addRow.setBackground(BG_CARD);
-        addRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-        addRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JTextField addField = new JTextField();
-        styleTextField(addField);
-
-        JButton addKwBtn = styledButton("+", TEAL);
-        addKwBtn.setPreferredSize(new Dimension(26, 26));
-
-        Runnable addKeyword = () -> {
-            String keyword = addField.getText().trim().toLowerCase();
-            if (!keyword.isEmpty() && !tab.getKeywords().contains(keyword)) {
-                tab.getKeywords().add(keyword);
-                keywordsPanel.add(buildKeywordRow(keyword, tab, keywordsPanel));
-                keywordsPanel.revalidate();
-                keywordsPanel.repaint();
-                addField.setText("");
-                layoutManager.saveActivePreset();
-                onLayoutChanged.run();
-            }
-        };
-
-        addField.addActionListener(e -> addKeyword.run());
-        addKwBtn.addActionListener(e -> addKeyword.run());
-
-        addRow.add(addField, BorderLayout.CENTER);
-        addRow.add(addKwBtn, BorderLayout.EAST);
-        card.add(addRow);
+        card.add(keywordCount);
 
         return card;
-    }
-
-    private JPanel buildKeywordRow(String keyword, BankLayoutTab tab, JPanel keywordsPanel) {
-        JPanel row = new JPanel(new BorderLayout(4, 0));
-        row.setBackground(BG_CARD);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel kwLabel = new JLabel(keyword);
-        kwLabel.setForeground(TEXT_DIM);
-        kwLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
-
-        JButton removeBtn = new JButton("\u00d7");
-        removeBtn.setForeground(new Color(180, 60, 60));
-        removeBtn.setBackground(BG_CARD);
-        removeBtn.setBorder(null);
-        removeBtn.setFont(new Font("SansSerif", Font.BOLD, 13));
-        removeBtn.setPreferredSize(new Dimension(18, 18));
-        removeBtn.setFocusPainted(false);
-        removeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        removeBtn.addActionListener(e -> {
-            tab.getKeywords().remove(keyword);
-            keywordsPanel.remove(row);
-            keywordsPanel.revalidate();
-            keywordsPanel.repaint();
-            layoutManager.saveActivePreset();
-            onLayoutChanged.run();
-        });
-
-        row.add(kwLabel, BorderLayout.CENTER);
-        row.add(removeBtn, BorderLayout.EAST);
-
-        return row;
-    }
-
-    private void addNewTab() {
-        BankLayoutPreset preset = layoutManager.getActivePreset();
-        if (preset == null) {
-            return;
-        }
-
-        BankLayoutTab newTab = new BankLayoutTab(0, "New Tab", new Color(150, 150, 150), new ArrayList<>());
-        layoutManager.addTab(newTab);
-        rebuildTabList();
-        onLayoutChanged.run();
     }
 
     private Color safeColor(Color color) {
@@ -370,25 +279,5 @@ public class BankAdvisorPanel extends PluginPanel {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setFont(new Font("SansSerif", Font.BOLD, 11));
         return btn;
-    }
-
-    private void styleTextField(JTextField field) {
-        field.setBackground(BG_INPUT);
-        field.setForeground(TEXT);
-        field.setCaretColor(TEXT);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER),
-            new EmptyBorder(2, 4, 2, 4)
-        ));
-        field.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-    }
-
-    private JLabel dimLabel(String text) {
-        JLabel lbl = new JLabel(text);
-        lbl.setForeground(TEXT_DIM);
-        lbl.setFont(new Font("SansSerif", Font.PLAIN, 10));
-        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return lbl;
     }
 }

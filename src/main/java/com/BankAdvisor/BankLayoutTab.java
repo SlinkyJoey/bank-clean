@@ -5,6 +5,7 @@ import net.runelite.api.ItemComposition;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public class BankLayoutTab {
@@ -88,13 +89,7 @@ public class BankLayoutTab {
         }
 
         for (String keyword : getKeywords()) {
-            if (keyword == null || keyword.isBlank()) {
-                continue;
-            }
-
-            if (Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE)
-                    .matcher(itemName)
-                    .find()) {
+            if (keywordMatches(itemName, keyword)) {
                 return true;
             }
         }
@@ -143,6 +138,38 @@ public class BankLayoutTab {
         }
 
         return null;
+    }
+
+    private boolean keywordMatches(String itemName, String keyword) {
+        if (itemName == null || keyword == null || keyword.isBlank()) {
+            return false;
+        }
+
+        String normalizedItemName = itemName.toLowerCase(Locale.ROOT);
+        String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
+
+        /*
+         * If the keyword intentionally contains leading/trailing spaces,
+         * preserve old phrase behavior. This is useful for patterns like " rune"
+         * so "Air rune" matches but "Rune scimitar" does not.
+         */
+        if (!keyword.equals(keyword.trim())) {
+            return normalizedItemName.contains(normalizedKeyword);
+        }
+
+        normalizedKeyword = normalizedKeyword.trim();
+
+        /*
+         * Match whole words/phrases only.
+         * This stops bad matches like:
+         * - "ring" matching "watering"
+         * - "bow" matching "bowl"
+         */
+        Pattern pattern = Pattern.compile(
+                "(?i)(^|[^a-z0-9])" + Pattern.quote(normalizedKeyword) + "($|[^a-z0-9])"
+        );
+
+        return pattern.matcher(normalizedItemName).find();
     }
 
     public boolean isUncategorized() {

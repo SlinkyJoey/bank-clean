@@ -98,11 +98,10 @@ public class BankLayoutPreset {
                 "Consumables",
                 new Color(220, 60, 60),
                 Arrays.asList(
-                        "potion", "brew", "antifire", "restore", "food",
+                        "potion", "brew", "restore", "antifire", "sanfew",
                         "shark", "anglerfish", "manta ray", "dark crab",
                         "karambwan", "monkfish", "lobster", "swordfish",
-                        "tuna", "salmon", "trout", "pizza", "pie", "cake",
-                        "bread", "stew", "wine", "jug"
+                        "tuna", "salmon", "trout"
                 ),
                 Arrays.asList("Eat", "Drink"),
                 Arrays.asList(
@@ -110,14 +109,18 @@ public class BankLayoutPreset {
                                 "Potions",
                                 1,
                                 new Color(220, 120, 60),
-                                Arrays.asList("potion", "brew", "restore", "antifire", "sanfew"),
+                                Arrays.asList("potion", "brew", "restore", "antifire", "sanfew", "serum"),
                                 Arrays.asList("Drink")
                         ),
                         new BankLayoutSection(
                                 "Food",
                                 2,
                                 new Color(220, 60, 60),
-                                Arrays.asList("shark", "anglerfish", "manta ray", "karambwan", "lobster", "swordfish", "tuna", "salmon", "trout", "pizza", "pie", "cake", "bread"),
+                                Arrays.asList(
+                                        "shark", "anglerfish", "manta ray", "dark crab",
+                                        "karambwan", "monkfish", "lobster", "swordfish",
+                                        "tuna", "salmon", "trout"
+                                ),
                                 Arrays.asList("Eat")
                         )
                 )
@@ -155,12 +158,13 @@ public class BankLayoutPreset {
                 "Gear",
                 new Color(180, 120, 220),
                 Arrays.asList(
-                        "helm", "body", "legs", "shield", "sword", "scimitar",
-                        "whip", "bow", "crossbow", "staff", "wand", "boots",
-                        "gloves", "cape", "amulet", "ring", "robe", "armour",
-                        "barrows", "dragon", "black d'hide", "blessed", "void",
-                        "bandos", "armadyl", "ancestral", "torva", "masori",
-                        "fang", "rapier", "defender", "blowpipe", "trident"
+                        "whip", "scimitar", "fang", "rapier", "hasta", "lance",
+                        "defender", "bandos", "torva", "armadyl", "masori",
+                        "black d'hide", "blowpipe", "bow", "crossbow",
+                        "staff", "wand", "trident", "shadow",
+                        "ancestral", "ahrim", "mystic", "robe",
+                        "helm", "platebody", "platelegs", "chainskirt",
+                        "amulet", "necklace", "ring", "bracelet"
                 ),
                 Arrays.asList("Wear", "Wield", "Equip", "Operate"),
                 Arrays.asList(
@@ -169,38 +173,47 @@ public class BankLayoutPreset {
                                 1,
                                 new Color(220, 80, 80),
                                 Arrays.asList(
-                                        "whip", "scimitar", "sword", "fang", "rapier", "hasta", "lance",
-                                        "defender", "bandos", "torva", "platebody", "platelegs", "melee",
-                                        "berserker", "torture"
+                                        "whip", "scimitar", "fang", "rapier", "hasta", "lance",
+                                        "defender", "bandos", "torva", "platebody", "platelegs",
+                                        "berserker", "torture", "melee"
                                 ),
-                                Arrays.asList("Wield")
+                                new ArrayList<>()
                         ),
                         new BankLayoutSection(
                                 "Ranged",
                                 2,
                                 new Color(80, 180, 100),
                                 Arrays.asList(
-                                        "bow", "crossbow", "blowpipe", "ballista", "d'hide", "chaps",
-                                        "armadyl", "masori", "archer", "anguish", "ranged"
+                                        "bow", "crossbow", "blowpipe", "ballista",
+                                        "d'hide", "chaps", "armadyl", "masori",
+                                        "archer", "anguish", "ranged"
                                 ),
-                                Arrays.asList("Wield")
+                                new ArrayList<>()
                         ),
                         new BankLayoutSection(
                                 "Magic",
                                 3,
                                 new Color(100, 149, 237),
                                 Arrays.asList(
-                                        "staff", "wand", "trident", "shadow", "robe", "ancestral",
-                                        "ahrim", "mystic", "occult", "tormented", "mage", "magic"
+                                        "staff", "wand", "trident", "shadow",
+                                        "robe", "ancestral", "ahrim", "mystic",
+                                        "occult", "tormented", "mage", "magic"
                                 ),
-                                Arrays.asList("Wield")
+                                new ArrayList<>()
                         ),
                         new BankLayoutSection(
                                 "Jewelry",
                                 4,
                                 new Color(240, 210, 90),
-                                Arrays.asList("amulet", "ring", "bracelet", "necklace", "cape", "gloves", "boots"),
-                                Arrays.asList("Wear", "Equip")
+                                Arrays.asList(
+                                        "amulet", "necklace", "ring", "bracelet",
+                                        "berserker ring", "archers ring", "seers ring",
+                                        "ring of suffering", "ring of endurance",
+                                        "amulet of fury", "amulet of torture",
+                                        "necklace of anguish", "occult necklace",
+                                        "tormented bracelet"
+                                ),
+                                new ArrayList<>()
                         )
                 )
         ));
@@ -211,8 +224,8 @@ public class BankLayoutPreset {
                 new Color(80, 180, 100),
                 Arrays.asList(
                         "pickaxe", "axe", "hatchet", "fishing rod", "harpoon",
-                        "net", "tinderbox", "chisel", "hammer", "needle",
-                        "thread", "knife", "saw", "plank", "rake", "spade",
+                        "tinderbox", "chisel", "hammer", "needle",
+                        "thread", "knife", "saw", "rake", "spade",
                         "watering can", "secateurs"
                 ),
                 new ArrayList<>(),
@@ -221,7 +234,11 @@ public class BankLayoutPreset {
                                 "Tools",
                                 1,
                                 new Color(80, 180, 100),
-                                Arrays.asList("pickaxe", "axe", "hatchet", "fishing rod", "harpoon", "net", "tinderbox", "chisel", "hammer", "needle", "thread", "knife", "saw"),
+                                Arrays.asList(
+                                        "pickaxe", "axe", "hatchet", "fishing rod",
+                                        "harpoon", "tinderbox", "chisel", "hammer",
+                                        "needle", "thread", "knife", "saw"
+                                ),
                                 new ArrayList<>()
                         ),
                         new BankLayoutSection(
@@ -262,7 +279,8 @@ public class BankLayoutPreset {
                 new Color(150, 150, 150),
                 Arrays.asList(
                         "clue", "quest", "key", "scroll", "casket",
-                        "mysterious", "strange", "ticket", "token"
+                        "mysterious", "strange", "ticket", "token",
+                        "holiday", "costume", "event"
                 )
         ));
 
@@ -284,7 +302,7 @@ public class BankLayoutPreset {
                 1,
                 "Food & Supplies",
                 new Color(220, 60, 60),
-                Arrays.asList("cooked", "shark", "lobster", "tuna", "salmon", "potion", "restore"),
+                Arrays.asList("shark", "lobster", "tuna", "salmon", "potion", "restore"),
                 Arrays.asList("Eat", "Drink")
         ));
 
@@ -306,7 +324,7 @@ public class BankLayoutPreset {
                 4,
                 "Fishing & Cooking",
                 new Color(60, 120, 200),
-                Arrays.asList("rod", "net", "harpoon", "pot", "raw ", "feather", "bait", "knife")
+                Arrays.asList("rod", "net", "harpoon", "raw ", "feather", "bait", "knife")
         ));
 
         tabs.add(new BankLayoutTab(
@@ -334,7 +352,7 @@ public class BankLayoutPreset {
                 8,
                 "Misc",
                 new Color(150, 150, 150),
-                Arrays.asList("clue", "quest", "key", "scroll")
+                Arrays.asList("clue", "quest", "key", "scroll", "holiday", "costume", "event")
         ));
 
         tabs.add(new BankLayoutTab(9, "Uncategorized", Color.GRAY));
