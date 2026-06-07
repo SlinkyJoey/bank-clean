@@ -10,7 +10,10 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 import javax.inject.Inject;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
 @Slf4j
@@ -20,28 +23,37 @@ import java.awt.image.BufferedImage;
     tags = {"bank", "sort", "organise", "tabs", "layout"}
 )
 public class BankAdvisorPlugin extends Plugin {
+    @Inject
+    private ClientToolbar clientToolbar;
 
-    @Inject private ClientToolbar clientToolbar;
-    @Inject private OverlayManager overlayManager;
-    @Inject private BankLayoutManager layoutManager;
-    @Inject private BankOverlay bankOverlay;
+    @Inject
+    private OverlayManager overlayManager;
+
+    @Inject
+    private BankLayoutManager layoutManager;
+
+    @Inject
+    private BankOverlay bankOverlay;
 
     private BankAdvisorPanel panel;
     private NavigationButton navButton;
 
     @Override
     protected void startUp() {
-        panel = new BankAdvisorPanel(layoutManager, () -> {});
+        layoutManager.loadSavedOrDefaultPreset();
+
+        panel = new BankAdvisorPanel(layoutManager, () -> {
+        });
 
         BufferedImage icon = new BufferedImage(25, 25, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = icon.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(new Color(0, 212, 184));
-        g.fillRoundRect(1, 1, 23, 23, 6, 6);
-        g.setColor(new Color(6, 14, 28));
-        g.setFont(new Font("SansSerif", Font.BOLD, 14));
-        g.drawString("B", 7, 18);
-        g.dispose();
+        Graphics2D graphics = icon.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics.setColor(new Color(0, 212, 184));
+        graphics.fillRoundRect(1, 1, 23, 23, 6, 6);
+        graphics.setColor(new Color(6, 14, 28));
+        graphics.setFont(new Font("SansSerif", Font.BOLD, 14));
+        graphics.drawString("B", 7, 18);
+        graphics.dispose();
 
         navButton = NavigationButton.builder()
             .tooltip("Bank Advisor")
@@ -52,14 +64,20 @@ public class BankAdvisorPlugin extends Plugin {
 
         clientToolbar.addNavigation(navButton);
         overlayManager.add(bankOverlay);
+
         log.info("Bank Advisor started");
     }
 
     @Override
     protected void shutDown() {
-        clientToolbar.removeNavigation(navButton);
+        if (navButton != null) {
+            clientToolbar.removeNavigation(navButton);
+        }
+
         overlayManager.remove(bankOverlay);
         panel = null;
+        navButton = null;
+
         log.info("Bank Advisor stopped");
     }
 

@@ -2,22 +2,40 @@ package com.BankAdvisor;
 
 import net.runelite.client.ui.PluginPanel;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JColorChooser;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JTextField;
+import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BankAdvisorPanel extends PluginPanel {
-
-    private static final Color TEAL     = new Color(0, 212, 184);
-    private static final Color BG       = new Color(6, 14, 28);
-    private static final Color BG_CARD  = new Color(12, 22, 40);
+    private static final Color TEAL = new Color(0, 212, 184);
+    private static final Color BG = new Color(6, 14, 28);
+    private static final Color BG_CARD = new Color(12, 22, 40);
     private static final Color BG_INPUT = new Color(20, 35, 60);
-    private static final Color TEXT     = new Color(220, 220, 220);
+    private static final Color TEXT = new Color(220, 220, 220);
     private static final Color TEXT_DIM = new Color(130, 130, 130);
-    private static final Color BORDER   = new Color(30, 50, 80);
+    private static final Color BORDER = new Color(30, 50, 80);
 
     private final BankLayoutManager layoutManager;
     private final Runnable onLayoutChanged;
@@ -25,8 +43,7 @@ public class BankAdvisorPanel extends PluginPanel {
     private JComboBox<String> presetSelector;
     private JPanel tabListPanel;
 
-    public BankAdvisorPanel(BankLayoutManager layoutManager,
-                            Runnable onLayoutChanged) {
+    public BankAdvisorPanel(BankLayoutManager layoutManager, Runnable onLayoutChanged) {
         super(false);
         this.layoutManager = layoutManager;
         this.onLayoutChanged = onLayoutChanged;
@@ -42,6 +59,7 @@ public class BankAdvisorPanel extends PluginPanel {
         scroll.getViewport().setBackground(BG);
         scroll.setBorder(null);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
         add(scroll, BorderLayout.CENTER);
     }
 
@@ -78,22 +96,7 @@ public class BankAdvisorPanel extends PluginPanel {
             presetSelector.setSelectedItem(layoutManager.getActivePreset().getName());
         }
 
-        presetSelector.addActionListener(e -> {
-            String selected = (String) presetSelector.getSelectedItem();
-            if (selected != null) {
-                int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "Switch to \"" + selected + "\"?\nYour current edits will be replaced.",
-                    "Switch Preset",
-                    JOptionPane.YES_NO_OPTION
-                );
-                if (confirm == JOptionPane.YES_OPTION) {
-                    layoutManager.setActivePreset(selected);
-                    rebuildTabList();
-                    onLayoutChanged.run();
-                }
-            }
-        });
+        presetSelector.addActionListener(e -> switchPreset());
 
         header.add(presetSelector);
         header.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -108,6 +111,26 @@ public class BankAdvisorPanel extends PluginPanel {
         return header;
     }
 
+    private void switchPreset() {
+        String selected = (String) presetSelector.getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Switch to \"" + selected + "\"?\nYour current edits will be replaced.",
+            "Switch Preset",
+            JOptionPane.YES_NO_OPTION
+        );
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            layoutManager.setActivePreset(selected);
+            rebuildTabList();
+            onLayoutChanged.run();
+        }
+    }
+
     private JPanel buildTabList() {
         tabListPanel = new JPanel();
         tabListPanel.setLayout(new BoxLayout(tabListPanel, BoxLayout.Y_AXIS));
@@ -120,11 +143,11 @@ public class BankAdvisorPanel extends PluginPanel {
         tabListPanel.removeAll();
 
         BankLayoutPreset preset = layoutManager.getActivePreset();
-        if (preset == null) return;
-
-        for (BankLayoutTab tab : preset.getTabs()) {
-            tabListPanel.add(buildTabCard(tab));
-            tabListPanel.add(Box.createRigidArea(new Dimension(0, 6)));
+        if (preset != null && preset.getTabs() != null) {
+            for (BankLayoutTab tab : preset.getTabs()) {
+                tabListPanel.add(buildTabCard(tab));
+                tabListPanel.add(Box.createRigidArea(new Dimension(0, 6)));
+            }
         }
 
         JButton addTabBtn = styledButton("+ Add Tab", TEAL);
@@ -141,7 +164,7 @@ public class BankAdvisorPanel extends PluginPanel {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(BG_CARD);
         card.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(0, 3, 0, 0, tab.getColor()),
+            new MatteBorder(0, 3, 0, 0, safeColor(tab.getColor())),
             new EmptyBorder(6, 8, 6, 8)
         ));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -153,7 +176,7 @@ public class BankAdvisorPanel extends PluginPanel {
 
         JLabel numBadge = new JLabel(" " + tab.getNumber() + " ");
         numBadge.setForeground(BG);
-        numBadge.setBackground(tab.getColor());
+        numBadge.setBackground(safeColor(tab.getColor()));
         numBadge.setOpaque(true);
         numBadge.setFont(new Font("SansSerif", Font.BOLD, 11));
         numBadge.setBorder(new EmptyBorder(1, 4, 1, 4));
@@ -186,17 +209,15 @@ public class BankAdvisorPanel extends PluginPanel {
         });
 
         JButton colorBtn = new JButton();
-        colorBtn.setBackground(tab.getColor());
+        colorBtn.setBackground(safeColor(tab.getColor()));
         colorBtn.setPreferredSize(new Dimension(16, 16));
         colorBtn.setBorder(BorderFactory.createLineBorder(BORDER));
         colorBtn.setFocusPainted(false);
         colorBtn.setToolTipText("Change colour");
         colorBtn.addActionListener(e -> {
-            Color chosen = JColorChooser.showDialog(
-                this, "Choose tab colour", tab.getColor());
+            Color chosen = JColorChooser.showDialog(this, "Choose tab colour", safeColor(tab.getColor()));
             if (chosen != null) {
                 tab.setColor(chosen);
-                colorBtn.setBackground(chosen);
                 rebuildTabList();
                 layoutManager.saveActivePreset();
                 onLayoutChanged.run();
@@ -207,11 +228,10 @@ public class BankAdvisorPanel extends PluginPanel {
         deleteBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
         deleteBtn.setPreferredSize(new Dimension(22, 22));
         deleteBtn.setToolTipText("Delete tab");
+        deleteBtn.setEnabled(!tab.isUncategorized());
         deleteBtn.addActionListener(e -> {
-            layoutManager.getActivePreset().getTabs().remove(tab);
-            renumberTabs();
+            layoutManager.removeTab(tab);
             rebuildTabList();
-            layoutManager.saveActivePreset();
             onLayoutChanged.run();
         });
 
@@ -236,10 +256,11 @@ public class BankAdvisorPanel extends PluginPanel {
             tab.setName(nameField.getText().trim());
             nameLabel.setText(tab.getName());
             layoutManager.saveActivePreset();
+            onLayoutChanged.run();
         });
 
         card.add(Box.createRigidArea(new Dimension(0, 6)));
-        card.add(dimLabel("Keywords (items containing these words go here):"));
+        card.add(dimLabel("Keywords:"));
 
         JPanel keywordsPanel = new JPanel();
         keywordsPanel.setLayout(new BoxLayout(keywordsPanel, BoxLayout.Y_AXIS));
@@ -260,16 +281,15 @@ public class BankAdvisorPanel extends PluginPanel {
 
         JTextField addField = new JTextField();
         styleTextField(addField);
-        addField.setToolTipText("Type a keyword and press Enter or +");
 
         JButton addKwBtn = styledButton("+", TEAL);
         addKwBtn.setPreferredSize(new Dimension(26, 26));
 
         Runnable addKeyword = () -> {
-            String kw = addField.getText().trim().toLowerCase();
-            if (!kw.isEmpty() && !tab.getKeywords().contains(kw)) {
-                tab.getKeywords().add(kw);
-                keywordsPanel.add(buildKeywordRow(kw, tab, keywordsPanel));
+            String keyword = addField.getText().trim().toLowerCase();
+            if (!keyword.isEmpty() && !tab.getKeywords().contains(keyword)) {
+                tab.getKeywords().add(keyword);
+                keywordsPanel.add(buildKeywordRow(keyword, tab, keywordsPanel));
                 keywordsPanel.revalidate();
                 keywordsPanel.repaint();
                 addField.setText("");
@@ -288,8 +308,7 @@ public class BankAdvisorPanel extends PluginPanel {
         return card;
     }
 
-    private JPanel buildKeywordRow(String keyword, BankLayoutTab tab,
-                                   JPanel keywordsPanel) {
+    private JPanel buildKeywordRow(String keyword, BankLayoutTab tab, JPanel keywordsPanel) {
         JPanel row = new JPanel(new BorderLayout(4, 0));
         row.setBackground(BG_CARD);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
@@ -318,29 +337,24 @@ public class BankAdvisorPanel extends PluginPanel {
 
         row.add(kwLabel, BorderLayout.CENTER);
         row.add(removeBtn, BorderLayout.EAST);
+
         return row;
     }
 
     private void addNewTab() {
         BankLayoutPreset preset = layoutManager.getActivePreset();
-        int nextNum = preset.getTabs().size() + 1;
-        BankLayoutTab newTab = new BankLayoutTab(
-            nextNum,
-            "Tab " + nextNum,
-            new Color(150, 150, 150),
-            new ArrayList<>()
-        );
-        preset.getTabs().add(newTab);
+        if (preset == null) {
+            return;
+        }
+
+        BankLayoutTab newTab = new BankLayoutTab(0, "New Tab", new Color(150, 150, 150), new ArrayList<>());
+        layoutManager.addTab(newTab);
         rebuildTabList();
-        layoutManager.saveActivePreset();
         onLayoutChanged.run();
     }
 
-    private void renumberTabs() {
-        List<BankLayoutTab> tabs = layoutManager.getActivePreset().getTabs();
-        for (int i = 0; i < tabs.size(); i++) {
-            tabs.get(i).setNumber(i + 1);
-        }
+    private Color safeColor(Color color) {
+        return color == null ? Color.GRAY : color;
     }
 
     public void rebuildTabList() {

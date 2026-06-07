@@ -1,4 +1,3 @@
-// src/main/java/com/BankAdvisor/BankLayoutTab.java
 package com.BankAdvisor;
 
 import lombok.Getter;
@@ -21,8 +20,8 @@ public class BankLayoutTab {
     private List<String> keywords = new ArrayList<>();
     private List<String> actions = new ArrayList<>();
     private boolean enabled = true;
+    private boolean set = false;
 
-    // Default constructor for Gson
     public BankLayoutTab() {
     }
 
@@ -32,28 +31,80 @@ public class BankLayoutTab {
         this.color = color;
     }
 
+    public BankLayoutTab(int number, String name, Color color, List<String> keywords) {
+        this.number = number;
+        this.name = name;
+        this.color = color;
+        this.keywords = keywords == null ? new ArrayList<>() : new ArrayList<>(keywords);
+    }
+
+    public BankLayoutTab(int number, String name, Color color, List<String> keywords, List<String> actions) {
+        this.number = number;
+        this.name = name;
+        this.color = color;
+        this.keywords = keywords == null ? new ArrayList<>() : new ArrayList<>(keywords);
+        this.actions = actions == null ? new ArrayList<>() : new ArrayList<>(actions);
+    }
+
+    public BankLayoutTab(BankLayoutTab other) {
+        this.number = other.number;
+        this.name = other.name;
+        this.color = other.color;
+        this.keywords = other.keywords == null ? new ArrayList<>() : new ArrayList<>(other.keywords);
+        this.actions = other.actions == null ? new ArrayList<>() : new ArrayList<>(other.actions);
+        this.enabled = other.enabled;
+        this.set = other.set;
+    }
+
     public boolean matches(ItemComposition item) {
-        // Check keywords first
+        if (item == null) {
+            return false;
+        }
+
+        return matches(item.getName());
+    }
+
+    public boolean matches(String itemName) {
+        if (itemName == null || keywords == null || !enabled) {
+            return false;
+        }
+
         for (String keyword : keywords) {
-            if (Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE).matcher(item.getName()).find()) {
+            if (keyword == null || keyword.isBlank()) {
+                continue;
+            }
+
+            if (Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE)
+                .matcher(itemName)
+                .find()) {
                 return true;
             }
         }
-        // Fallback to actions
-        for (String action : actions) {
-            // Check if the item has this action.
-            // Note: This is a simplified check. RuneLite's ItemComposition doesn't directly expose actions easily.
-            // A more robust solution might involve checking item IDs against known action-performing items.
-            // For now, we'll assume actions are listed and items that *can* perform them will match.
-            // A better approach for actions might be to look at the widget item's available actions.
-            // For this example, we'll keep it simple and rely on keywords primarily.
-            // If you have a way to get actions for an ItemComposition, implement it here.
-        }
+
         return false;
     }
 
-    // New method to check if this tab is the "Uncategorized" tab
+    public boolean matchesActions(String[] itemActions) {
+        if (itemActions == null || actions == null || !enabled) {
+            return false;
+        }
+
+        for (String wantedAction : actions) {
+            if (wantedAction == null || wantedAction.isBlank()) {
+                continue;
+            }
+
+            for (String itemAction : itemActions) {
+                if (itemAction != null && itemAction.equalsIgnoreCase(wantedAction)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public boolean isUncategorized() {
-        return "Uncategorized".equals(this.name);
+        return "Uncategorized".equalsIgnoreCase(name);
     }
 }
