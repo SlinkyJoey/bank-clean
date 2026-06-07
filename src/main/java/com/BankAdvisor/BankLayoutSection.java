@@ -1,85 +1,49 @@
 package com.BankAdvisor;
 
-import net.runelite.api.ItemComposition;
-
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class BankLayoutTab {
-    private int number;
+public class BankLayoutSection {
     private String name;
+    private int row;
     private Color color;
     private List<String> keywords = new ArrayList<>();
     private List<String> actions = new ArrayList<>();
-    private List<BankLayoutSection> sections = new ArrayList<>();
     private boolean enabled = true;
-    private boolean set = false;
 
-    public BankLayoutTab() {
+    public BankLayoutSection() {
     }
 
-    public BankLayoutTab(int number, String name, Color color) {
-        this.number = number;
+    public BankLayoutSection(String name, int row, Color color) {
         this.name = name;
+        this.row = row;
         this.color = color;
     }
 
-    public BankLayoutTab(int number, String name, Color color, List<String> keywords) {
-        this.number = number;
+    public BankLayoutSection(String name, int row, Color color, List<String> keywords) {
         this.name = name;
-        this.color = color;
-        this.keywords = keywords == null ? new ArrayList<>() : new ArrayList<>(keywords);
-    }
-
-    public BankLayoutTab(int number, String name, Color color, List<String> keywords, List<String> actions) {
-        this.number = number;
-        this.name = name;
+        this.row = row;
         this.color = color;
         this.keywords = keywords == null ? new ArrayList<>() : new ArrayList<>(keywords);
-        this.actions = actions == null ? new ArrayList<>() : new ArrayList<>(actions);
     }
 
-    public BankLayoutTab(
-            int number,
-            String name,
-            Color color,
-            List<String> keywords,
-            List<String> actions,
-            List<BankLayoutSection> sections
-    ) {
-        this.number = number;
+    public BankLayoutSection(String name, int row, Color color, List<String> keywords, List<String> actions) {
         this.name = name;
+        this.row = row;
         this.color = color;
         this.keywords = keywords == null ? new ArrayList<>() : new ArrayList<>(keywords);
         this.actions = actions == null ? new ArrayList<>() : new ArrayList<>(actions);
-        this.sections = sections == null ? new ArrayList<>() : new ArrayList<>(sections);
     }
 
-    public BankLayoutTab(BankLayoutTab other) {
-        this.number = other.number;
+    public BankLayoutSection(BankLayoutSection other) {
         this.name = other.name;
+        this.row = other.row;
         this.color = other.color;
         this.keywords = other.keywords == null ? new ArrayList<>() : new ArrayList<>(other.keywords);
         this.actions = other.actions == null ? new ArrayList<>() : new ArrayList<>(other.actions);
         this.enabled = other.enabled;
-        this.set = other.set;
-
-        this.sections = new ArrayList<>();
-        if (other.sections != null) {
-            for (BankLayoutSection section : other.sections) {
-                this.sections.add(new BankLayoutSection(section));
-            }
-        }
-    }
-
-    public boolean matches(ItemComposition item) {
-        if (item == null) {
-            return false;
-        }
-
-        return matches(item.getName());
     }
 
     public boolean matches(String itemName) {
@@ -93,8 +57,8 @@ public class BankLayoutTab {
             }
 
             if (Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE)
-                    .matcher(itemName)
-                    .find()) {
+                .matcher(itemName)
+                .find()) {
                 return true;
             }
         }
@@ -122,39 +86,12 @@ public class BankLayoutTab {
         return false;
     }
 
-    public BankLayoutSection getSectionForItem(ItemComposition itemComposition) {
-        if (itemComposition == null) {
-            return null;
-        }
-
-        String itemName = itemComposition.getName();
-        String[] itemActions = itemComposition.getInventoryActions();
-
-        for (BankLayoutSection section : getSections()) {
-            if (section.matches(itemName)) {
-                return section;
-            }
-        }
-
-        for (BankLayoutSection section : getSections()) {
-            if (section.matchesActions(itemActions)) {
-                return section;
-            }
-        }
-
-        return null;
-    }
-
-    public boolean isUncategorized() {
-        return "Uncategorized".equalsIgnoreCase(name);
-    }
-
-    public int getNumber() {
-        return number;
-    }
-
     public String getName() {
         return name;
+    }
+
+    public int getRow() {
+        return row;
     }
 
     public Color getColor() {
@@ -175,27 +112,16 @@ public class BankLayoutTab {
         return actions;
     }
 
-    public List<BankLayoutSection> getSections() {
-        if (sections == null) {
-            sections = new ArrayList<>();
-        }
-        return sections;
-    }
-
     public boolean isEnabled() {
         return enabled;
     }
 
-    public boolean isSet() {
-        return set;
-    }
-
-    public void setNumber(int number) {
-        this.number = number;
-    }
-
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void setRow(int row) {
+        this.row = row;
     }
 
     public void setColor(Color color) {
@@ -210,15 +136,7 @@ public class BankLayoutTab {
         this.actions = actions == null ? new ArrayList<>() : actions;
     }
 
-    public void setSections(List<BankLayoutSection> sections) {
-        this.sections = sections == null ? new ArrayList<>() : sections;
-    }
-
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-    }
-
-    public void setSet(boolean set) {
-        this.set = set;
     }
 }

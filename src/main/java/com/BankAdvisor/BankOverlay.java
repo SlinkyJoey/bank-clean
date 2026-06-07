@@ -69,13 +69,18 @@ public class BankOverlay extends Overlay {
                 continue;
             }
 
-            Color tabColor = tab.getColor();
-            if (tabColor == null) {
-                tabColor = Color.GRAY;
+            BankLayoutSection section = tab.getSectionForItem(itemComposition);
+
+            Color color = section != null && section.getColor() != null
+                    ? section.getColor()
+                    : tab.getColor();
+
+            if (color == null) {
+                color = Color.GRAY;
             }
 
-            renderHighlight(graphics, itemWidget, tabColor);
-            renderTabNumber(graphics, itemWidget, tab.getNumber());
+            renderHighlight(graphics, itemWidget, color);
+            renderLabel(graphics, itemWidget, tab, section);
         }
 
         return null;
@@ -102,7 +107,7 @@ public class BankOverlay extends Overlay {
                 height
         );
 
-        Color fillColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 55);
+        Color fillColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 50);
         Color borderColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 230);
 
         graphics.setColor(fillColor);
@@ -115,18 +120,21 @@ public class BankOverlay extends Overlay {
         graphics.setStroke(originalStroke);
     }
 
-    private void renderTabNumber(Graphics2D graphics, Widget itemWidget, int tabNumber) {
+    private void renderLabel(Graphics2D graphics, Widget itemWidget, BankLayoutTab tab, BankLayoutSection section) {
         Point location = itemWidget.getCanvasLocation();
         if (location == null) {
             return;
         }
 
-        String text = String.valueOf(tabNumber);
+        String text = section == null
+                ? String.valueOf(tab.getNumber())
+                : tab.getNumber() + " " + section.getName();
 
-        graphics.setFont(new Font("Arial", Font.BOLD, 12));
+        graphics.setFont(new Font("Arial", Font.BOLD, 11));
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         FontMetrics metrics = graphics.getFontMetrics();
+
         int padding = 3;
         int bgX = location.getX() + 1;
         int bgY = location.getY() + 1;
