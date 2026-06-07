@@ -51,6 +51,7 @@ public class BankOverlay extends Overlay {
             // Get item ID directly from the widget
             int itemId = itemWidget.getItemId();
             if (itemId == -1) continue;
+            itemId = itemManager.canonicalize(itemId);
 
             // Get full ItemComposition — needed for both name and inventory actions
             ItemComposition comp = itemManager.getItemComposition(itemId);
