@@ -17,6 +17,7 @@ public class BankLayoutTab {
     private List<BankLayoutSection> sections = new ArrayList<>();
     private boolean enabled = true;
     private boolean set = false;
+    private boolean gearTab = false;
 
     public BankLayoutTab() {
     }
@@ -66,6 +67,7 @@ public class BankLayoutTab {
         this.actions = other.actions == null ? new ArrayList<>() : new ArrayList<>(other.actions);
         this.enabled = other.enabled;
         this.set = other.set;
+        this.gearTab = other.gearTab;
 
         this.sections = new ArrayList<>();
         if (other.sections != null) {
@@ -148,23 +150,12 @@ public class BankLayoutTab {
         String normalizedItemName = itemName.toLowerCase(Locale.ROOT);
         String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
 
-        /*
-         * If the keyword intentionally contains leading/trailing spaces,
-         * preserve old phrase behavior. This is useful for patterns like " rune"
-         * so "Air rune" matches but "Rune scimitar" does not.
-         */
         if (!keyword.equals(keyword.trim())) {
             return normalizedItemName.contains(normalizedKeyword);
         }
 
         normalizedKeyword = normalizedKeyword.trim();
 
-        /*
-         * Match whole words/phrases only.
-         * This stops bad matches like:
-         * - "ring" matching "watering"
-         * - "bow" matching "bowl"
-         */
         Pattern pattern = Pattern.compile(
                 "(?i)(^|[^a-z0-9])" + Pattern.quote(normalizedKeyword) + "($|[^a-z0-9])"
         );
@@ -217,6 +208,10 @@ public class BankLayoutTab {
         return set;
     }
 
+    public boolean isGearTab() {
+        return gearTab;
+    }
+
     public void setNumber(int number) {
         this.number = number;
     }
@@ -247,5 +242,9 @@ public class BankLayoutTab {
 
     public void setSet(boolean set) {
         this.set = set;
+    }
+
+    public void setGearTab(boolean gearTab) {
+        this.gearTab = gearTab;
     }
 }

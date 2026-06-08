@@ -9,7 +9,9 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.game.ItemEquipmentStats;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.ItemStats;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -49,6 +51,22 @@ public class BankLayoutManager {
     private final Gson gson = new GsonBuilder()
             .enableComplexMapKeySerialization()
             .create();
+
+    private enum CombatStyle {
+        MELEE("Melee"),
+        RANGED("Ranged"),
+        MAGIC("Magic");
+
+        private final String sectionName;
+
+        CombatStyle(String sectionName) {
+            this.sectionName = sectionName;
+        }
+
+        String getSectionName() {
+            return sectionName;
+        }
+    }
 
     public BankLayoutPreset getActivePreset() {
         return activePreset;
@@ -174,6 +192,17 @@ public class BankLayoutManager {
         ensureUncategorizedTabExists(activePreset);
 
         BankLayoutTab matchedTab = activePreset.getTabForItem(itemComposition);
+
+        // If keywords/actions matched nothing, route equipable combat gear to a gear tab.
+        if (matchedTab == null && classifyGear(itemComposition.getId()) != null) {
+            for (BankLayoutTab tab : activePreset.getTabs()) {
+                if (tab.isGearTab()) {
+                    matchedTab = tab;
+                    break;
+                }
+            }
+        }
+
         if (matchedTab != null) {
             return matchedTab;
         }
@@ -183,6 +212,97 @@ public class BankLayoutManager {
                 .filter(BankLayoutTab::isUncategorized)
                 .findFirst()
                 .orElseGet(() -> new BankLayoutTab(-1, UNCATEGORIZED_TAB_NAME, Color.GRAY));
+    }
+
+    public BankLayoutSection getSectionForItem(BankLayoutTab tab, ItemComposition itemComposition) {
+        if (tab == null || itemComposition == null) {
+            return null;
+        }
+
+        if (tab.isGearTab()) {
+            CombatStyle style = classifyGear(itemComposition.getId());
+            if (style != null) {
+                for (BankLayoutSection section : tab.getSections()) {
+                    if (style.getSectionName().equalsIgnoreCase(section.getName())) {
+                        return section;
+                    }
+                }
+            }
+        }
+
+        return tab.getSectionForItem(itemComposition);
+    }
+
+    /**
+     * Classifies an equipable item into a combat style using its equipment stats.
+     * Returns null for non-equipable items, or equipable items with no combat
+     * signal at all (e.g. skilling outfits, pure teleport items) so they fall
+     * back to keyword matching.
+     */
+    private CombatStyle classifyGear(int itemId) {
+        ItemStats stats = itemManager.getItemStats(itemId);
+        if (stats == null || !stats.isEquipable()) {
+            return null;
+        }
+
+        ItemEquipmentStats eq = stats.getEquipment();
+        if (eq == null) {
+            return null;
+        }
+
+        int meleeAtk = Math.max(eq.getAstab(), Math.max(eq.getAslash(), eq.getAcrush()));
+        int rangeAtk = eq.getArange();
+        int mageAtk = eq.getAmagic();
+
+        int strBonus = eq.getStr();
+        int rangeStr = eq.getRstr();
+        int mageDmg = (int) eq.getMdmg();
+
+        // Primary signal: dominant positive attack bonus (catches all weapons).
+        int bestAtk = Math.max(meleeAtk, Math.max(rangeAtk, mageAtk));
+        if (bestAtk > 0) {
+            if (meleeAtk == bestAtk) {
+                return CombatStyle.MELEE;
+            }
+            if (rangeAtk == bestAtk) {
+                return CombatStyle.RANGED;
+            }
+            return CombatStyle.MAGIC;
+        }
+
+        // Secondary signal: strength / ranged strength / magic damage
+        // (catches armour with no attack bonus, e.g. Bandos, Masori, ancestral).
+        if (strBonus > 0 || rangeStr > 0 || mageDmg > 0) {
+            if (strBonus > 0 && strBonus >= rangeStr && strBonus >= mageDmg) {
+                return CombatStyle.MELEE;
+            }
+            if (rangeStr > 0 && rangeStr >= mageDmg) {
+                return CombatStyle.RANGED;
+            }
+            if (mageDmg > 0) {
+                return CombatStyle.MAGIC;
+            }
+        }
+
+        // Tertiary signal: defensive bonuses, for tank / prayer gear with no
+        // offence (e.g. Proselyte, Justiciar, defensive shields).
+        int meleeDef = Math.max(eq.getDstab(), Math.max(eq.getDslash(), eq.getDcrush()));
+        int rangeDef = eq.getDrange();
+        int mageDef = eq.getDmagic();
+
+        int bestDef = Math.max(meleeDef, Math.max(rangeDef, mageDef));
+        if (bestDef > 0) {
+            if (meleeDef == bestDef) {
+                return CombatStyle.MELEE;
+            }
+            if (rangeDef == bestDef) {
+                return CombatStyle.RANGED;
+            }
+            return CombatStyle.MAGIC;
+        }
+
+        // No combat signal at all — let keyword sections handle it.
+        return null;
     }
 
     public Optional<ItemComposition> getItemCompositionFromWidget(Widget widget) {
@@ -246,13 +366,14 @@ public class BankLayoutManager {
                 result.incrementUncategorizedItems();
                 result.incrementTab(UNCATEGORIZED_TAB_NAME, itemName);
                 result.addUncategorizedExample(itemName);
+                result.addUncategorizedItem(itemName);
                 continue;
             }
 
             result.incrementMatchedItems();
             result.incrementTab(tab.getNumber() + " " + tab.getName(), itemName);
 
-            BankLayoutSection section = tab.getSectionForItem(itemComposition);
+            BankLayoutSection section = getSectionForItem(tab, itemComposition);
             if (section == null) {
                 result.incrementSection(tab.getNumber() + " " + tab.getName() + " / No Section", itemName);
                 result.addNoSectionExample(itemName);
@@ -319,5 +440,36 @@ public class BankLayoutManager {
     public void setActivePreset(String selected) {
         loadPreset(selected);
         saveActivePreset();
+    }
+
+    public String exportActivePresetJson() {
+        if (activePreset == null) {
+            activePreset = createDefaultPreset();
+        }
+        return gson.toJson(activePreset);
+    }
+
+    public boolean importPresetJson(String json) {
+        if (json == null || json.isBlank()) {
+            return false;
+        }
+
+        try {
+            Type type = new TypeToken<BankLayoutPreset>() {
+            }.getType();
+
+            BankLayoutPreset imported = gson.fromJson(json, type);
+            if (imported == null || imported.getTabs() == null || imported.getTabs().isEmpty()) {
+                return false;
+            }
+
+            ensureUncategorizedTabExists(imported);
+            sortTabsByNumber(imported);
+            activePreset = imported;
+            saveActivePreset();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

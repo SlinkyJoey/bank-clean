@@ -7,6 +7,7 @@ import java.util.TreeMap;
 
 public class BankScanResult {
     private static final int MAX_EXAMPLES_PER_GROUP = 12;
+    private static final int MAX_UNCATEGORIZED_ITEMS = 2000;
 
     private int totalItems;
     private int matchedItems;
@@ -19,6 +20,9 @@ public class BankScanResult {
     private final Map<String, List<String>> sectionExamples = new TreeMap<>();
     private final List<String> uncategorizedExamples = new ArrayList<>();
     private final List<String> noSectionExamples = new ArrayList<>();
+
+    // Full list of uncategorized item names (deduped) for the assign feature.
+    private final List<String> uncategorizedItemsFull = new ArrayList<>();
 
     public void incrementTotalItems() {
         totalItems++;
@@ -64,6 +68,23 @@ public class BankScanResult {
 
     public void addNoSectionExample(String itemName) {
         addExample(noSectionExamples, itemName);
+    }
+
+    public void addUncategorizedItem(String itemName) {
+        if (itemName == null || itemName.isBlank()) {
+            return;
+        }
+        if (uncategorizedItemsFull.contains(itemName)) {
+            return;
+        }
+        if (uncategorizedItemsFull.size() >= MAX_UNCATEGORIZED_ITEMS) {
+            return;
+        }
+        uncategorizedItemsFull.add(itemName);
+    }
+
+    public List<String> getUncategorizedItems() {
+        return new ArrayList<>(uncategorizedItemsFull);
     }
 
     private void addExample(Map<String, List<String>> examplesByGroup, String groupName, String itemName) {

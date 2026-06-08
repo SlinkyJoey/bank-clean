@@ -18,6 +18,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.Stroke;
 
 public class BankOverlay extends Overlay {
@@ -49,38 +50,72 @@ public class BankOverlay extends Overlay {
             return null;
         }
 
-        for (Widget itemWidget : children) {
-            if (itemWidget == null || itemWidget.isHidden()) {
-                continue;
+        // The visible scroll viewport. Items scrolled out of view still have
+        // canvas coordinates, so without clipping the overlay spills outside
+        // the bank UI and draws onto the game world below the window.
+        Rectangle viewport = bankContainer.getBounds();
+
+        Shape originalClip = graphics.getClip();
+        if (viewport != null) {
+            graphics.setClip(viewport);
+        }
+
+        try {
+            for (Widget itemWidget : children) {
+                if (itemWidget == null || itemWidget.isHidden()) {
+                    continue;
+                }
+
+                int itemId = itemWidget.getItemId();
+                if (itemId <= 0) {
+                    continue;
+                }
+
+                // Skip items that fall outside the visible bank viewport.
+                if (viewport != null) {
+                    Point loc = itemWidget.getCanvasLocation();
+                    if (loc == null) {
+                        continue;
+                    }
+
+                    int w = itemWidget.getWidth();
+                    int h = itemWidget.getHeight();
+                    if (w <= 0 || h <= 0) {
+                        w = 36;
+                        h = 32;
+                    }
+
+                    Rectangle itemBounds = new Rectangle(loc.getX(), loc.getY(), w, h);
+                    if (!viewport.intersects(itemBounds)) {
+                        continue;
+                    }
+                }
+
+                ItemComposition itemComposition = bankLayoutManager.getItemCompositionFromWidget(itemWidget).orElse(null);
+                if (itemComposition == null) {
+                    continue;
+                }
+
+                BankLayoutTab tab = bankLayoutManager.getTabForItem(itemComposition);
+                if (tab == null) {
+                    continue;
+                }
+
+                BankLayoutSection section = bankLayoutManager.getSectionForItem(tab, itemComposition);
+
+                Color color = section != null && section.getColor() != null
+                        ? section.getColor()
+                        : tab.getColor();
+
+                if (color == null) {
+                    color = Color.GRAY;
+                }
+
+                renderHighlight(graphics, itemWidget, color);
+                renderLabel(graphics, itemWidget, tab, section);
             }
-
-            int itemId = itemWidget.getItemId();
-            if (itemId <= 0) {
-                continue;
-            }
-
-            ItemComposition itemComposition = bankLayoutManager.getItemCompositionFromWidget(itemWidget).orElse(null);
-            if (itemComposition == null) {
-                continue;
-            }
-
-            BankLayoutTab tab = bankLayoutManager.getTabForItem(itemComposition);
-            if (tab == null) {
-                continue;
-            }
-
-            BankLayoutSection section = tab.getSectionForItem(itemComposition);
-
-            Color color = section != null && section.getColor() != null
-                    ? section.getColor()
-                    : tab.getColor();
-
-            if (color == null) {
-                color = Color.GRAY;
-            }
-
-            renderHighlight(graphics, itemWidget, color);
-            renderLabel(graphics, itemWidget, tab, section);
+        } finally {
+            graphics.setClip(originalClip);
         }
 
         return null;
